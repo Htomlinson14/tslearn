@@ -229,6 +229,7 @@ class GlobalAlignmentKernelKMeans(BaseEstimator, ClusterMixin):
         self.inertia_ = None
         self.sample_weight_ = None
         self.X_fit_ = None
+        self._K = None
 
     def _get_kernel(self, X, Y=None):
         return cdist_gak(X, Y, sigma=self.sigma)
@@ -258,7 +259,7 @@ class GlobalAlignmentKernelKMeans(BaseEstimator, ClusterMixin):
 
         return self
 
-    def fit(self, X, y=None, sample_weight=None):
+    def fit(self, X, y=None, sample_weight=None, K=None):
         """Compute kernel k-means clustering.
 
         Parameters
@@ -270,7 +271,8 @@ class GlobalAlignmentKernelKMeans(BaseEstimator, ClusterMixin):
         """
 
         n_samples = X.shape[0]
-        K = self._get_kernel(X)
+        if K is None:
+            K = self._get_kernel(X)
         sw = sample_weight if sample_weight else numpy.ones(n_samples)
         self.sample_weight_ = sw
         rs = check_random_state(self.random_state)
@@ -296,6 +298,7 @@ class GlobalAlignmentKernelKMeans(BaseEstimator, ClusterMixin):
             self.X_fit_ = X
             self.labels_ = last_correct_labels
             self.inertia_ = min_inertia
+            self._K = K
         else:
             self.X_fit_ = None
         return self
@@ -334,7 +337,7 @@ class GlobalAlignmentKernelKMeans(BaseEstimator, ClusterMixin):
         """
         return self.fit(X, y).labels_
 
-    def predict(self, X):
+    def predict(self, X, K=None):
         """Predict the closest cluster each time series in X belongs to.
 
         Parameters
@@ -347,7 +350,8 @@ class GlobalAlignmentKernelKMeans(BaseEstimator, ClusterMixin):
         labels : array of shape=(n_ts, )
             Index of the cluster each sample belongs to.
         """
-        K = self._get_kernel(X, self.X_fit_)
+        if K is None:
+            K = self._get_kernel(X, self.X_fit_)
         n_samples = X.shape[0]
         dist = numpy.zeros((n_samples, self.n_clusters))
         self._compute_dist(K, dist)
